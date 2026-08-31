@@ -1,0 +1,13 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+button { font-family: inherit; touch-action: manipulation; }
+input, select { font-family: inherit; }
+a { color: inherit; }
+img { -webkit-user-drag: none; }
+::-webkit-scrollbar { width: 0; height: 0; }
