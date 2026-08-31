@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { discountPct } from "../lib/config";
 import { useCart } from "../lib/cart";
 
@@ -8,11 +8,27 @@ export default function ProductModal({ product, onClose }) {
   const [added, setAdded] = useState(false);
   const { addItem } = useCart();
   const pct = discountPct(product.price, product.mrp);
+  const scrollerRef = useRef(null);
 
   const handleAdd = () => {
     addItem(product, size);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
+  };
+
+  const goToImage = (idx) => {
+    setActiveImg(idx);
+    const el = scrollerRef.current;
+    if (el) {
+      el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
+    }
+  };
+
+  const handleScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== activeImg) setActiveImg(idx);
   };
 
   return (
@@ -21,10 +37,23 @@ export default function ProductModal({ product, onClose }) {
         <div className="drag-handle" />
         <div className="sheet-body">
           <div className="image-col">
-            <div className="main-image">
-              <img src={product.images[activeImg]} alt={product.name} />
+            <div className="main-image-wrap">
+              <div className="scroller" ref={scrollerRef} onScroll={handleScroll}>
+                {product.images.map((img, idx) => (
+                  <div className="slide" key={idx}>
+                    <img src={img} alt={product.name} draggable={false} />
+                  </div>
+                ))}
+              </div>
               <button className="close-btn" onClick={onClose}>×</button>
               {pct > 0 && <div className="discount-badge">{pct}% OFF</div>}
+              {product.images.length > 1 && (
+                <div className="dots">
+                  {product.images.map((_, idx) => (
+                    <span key={idx} className={idx === activeImg ? "dot active" : "dot"} />
+                  ))}
+                </div>
+              )}
             </div>
             {product.images.length > 1 && (
               <div className="thumb-row">
@@ -32,7 +61,7 @@ export default function ProductModal({ product, onClose }) {
                   <img
                     key={idx}
                     src={img}
-                    onClick={() => setActiveImg(idx)}
+                    onClick={() => goToImage(idx)}
                     className={activeImg === idx ? "thumb active" : "thumb"}
                   />
                 ))}
@@ -108,12 +137,22 @@ export default function ProductModal({ product, onClose }) {
           flex: 1;
         }
         .image-col { position: relative; }
-        .main-image {
-          position: relative;
+        .main-image-wrap { position: relative; }
+        .scroller {
+          display: flex;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+        .scroller::-webkit-scrollbar { display: none; }
+        .slide {
+          flex: 0 0 100%;
+          scroll-snap-align: start;
           aspect-ratio: 4 / 5;
           background: #f4f4f4;
         }
-        .main-image img { width: 100%; height: 100%; object-fit: cover; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; user-select: none; }
         .close-btn {
           position: absolute;
           top: 12px;
@@ -126,6 +165,7 @@ export default function ProductModal({ product, onClose }) {
           font-size: 18px;
           cursor: pointer;
           line-height: 1;
+          z-index: 2;
         }
         .discount-badge {
           position: absolute;
@@ -137,7 +177,25 @@ export default function ProductModal({ product, onClose }) {
           font-weight: 700;
           padding: 4px 8px;
           border-radius: 4px;
+          z-index: 2;
         }
+        .dots {
+          position: absolute;
+          bottom: 10px;
+          left: 0;
+          right: 0;
+          display: flex;
+          justify-content: center;
+          gap: 6px;
+          z-index: 2;
+        }
+        .dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.6);
+        }
+        .dot.active { background: #fff; }
         .thumb-row { display: flex; gap: 8px; padding: 10px 14px; }
         .thumb { width: 48px; height: 58px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
         .thumb.active { border: 2px solid #111; }
@@ -181,7 +239,6 @@ export default function ProductModal({ product, onClose }) {
         }
         .cta.added { background: #2e7d32; }
 
-        /* Desktop: same stacked layout, just centered as a card instead of full-width sheet */
         @media (min-width: 768px) {
           .sheet-overlay { align-items: center; padding: 20px; }
           .sheet {
@@ -190,7 +247,6 @@ export default function ProductModal({ product, onClose }) {
             border-radius: 14px;
           }
           .drag-handle { display: none; }
-          .main-image { aspect-ratio: 4 / 5; }
         }
       `}</style>
     </div>

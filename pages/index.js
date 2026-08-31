@@ -9,6 +9,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
   const { count } = useCart();
 
   useEffect(() => {
@@ -21,14 +22,25 @@ export default function Home() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const filtered = category === "All" ? products : products.filter((p) => p.category === category);
 
   return (
     <div className="page">
-      <div className="announce">NOW DELIVERING IN SATNA & MAIHAR · COD</div>
-
-      <header className="header">
+      <header className={scrolled ? "header scrolled" : "header"}>
         <div className="logo">THE OUTFIT ROOM</div>
+        <nav className="nav">
+          {CATEGORIES.filter((c) => c !== "All").map((c) => (
+            <a key={c} href="#shop" onClick={() => setCategory(c)} className="nav-link">
+              {c.toUpperCase()}
+            </a>
+          ))}
+        </nav>
         <div className="header-actions">
           <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="wa-btn">
             WhatsApp
@@ -41,23 +53,37 @@ export default function Home() {
       </header>
 
       <div className="hero">
-        <img
-          src="https://images.unsplash.com/photo-1490114538077-0a7f8cb49891?w=1400&q=80"
-          alt="New arrivals"
-        />
-        <div className="hero-overlay" />
-        <div className="hero-text">
-          <div className="eyebrow">NEW ARRIVALS</div>
-          <div className="headline">Everyday fits, delivered to your door in Satna & Maihar.</div>
-          <a href="#shop" className="shop-btn">Shop Now</a>
+        <img src="https://opyxazheidtjkylembsw.supabase.co/storage/v1/object/public/product-images/1788177417248-ChatGPTImageAug31202605_25_30PM.png" alt="The Outfit Room" className="hero-img" />
+        <div className="hero-gradient" />
+        <div className="hero-content">
+          <div className="eyebrow">BETTER FITS. EVERYDAY.</div>
+          <h1 className="headline">
+            Everyday Fits,<br />Delivered Right.
+          </h1>
+          <p className="subhead">
+            Premium basics and easy fits — ordered on WhatsApp, delivered to your door in Satna &amp; Maihar.
+          </p>
+          <a href="#shop" className="shop-btn">
+            Shop Now <span className="arrow">→</span>
+          </a>
+        </div>
+        <div className="trust-bar">
+          <div className="trust-item">
+            <span className="trust-icon">💵</span>
+            <span>Cash on Delivery</span>
+          </div>
+          <div className="trust-item">
+            <span className="trust-icon">📍</span>
+            <span>Delivered in Satna &amp; Maihar</span>
+          </div>
+          <div className="trust-item">
+            <span className="trust-icon">📞</span>
+            <span>Size Confirmed on Call</span>
+          </div>
         </div>
       </div>
 
-      <div id="shop" className="subhead">
-        <p>Pick your size, add to cart — we confirm fit on a call and deliver COD.</p>
-      </div>
-
-      <div className="cat-row">
+      <div id="shop" className="cat-row">
         {CATEGORIES.map((c) => (
           <button
             key={c}
@@ -83,52 +109,76 @@ export default function Home() {
 
       <style jsx>{`
         .page { background: #fff; min-height: 100vh; }
-        .announce {
-          background: #111; color: #fff; text-align: center;
-          font-size: 11px; padding: 8px 12px; letter-spacing: 0.4px;
-        }
+
         .header {
-          border-bottom: 1px solid #eee;
-          padding: 14px 16px;
+          position: sticky; top: 0; z-index: 20;
+          padding: 18px 20px;
           display: flex; align-items: center; justify-content: space-between;
-          position: sticky; top: 0; background: #fff; z-index: 10;
+          background: transparent;
+          transition: background 0.25s ease, box-shadow 0.25s ease, padding 0.25s ease;
         }
-        .logo { font-size: 17px; font-weight: 800; letter-spacing: 0.2px; }
-        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header.scrolled {
+          background: #fff;
+          box-shadow: 0 1px 0 rgba(0,0,0,0.06);
+          padding: 12px 20px;
+        }
+        .logo { font-size: 16px; font-weight: 800; letter-spacing: 0.4px; color: #111; z-index: 2; }
+        .nav { display: none; }
+        .header-actions { display: flex; gap: 8px; align-items: center; z-index: 2; }
         .wa-btn {
           font-size: 12px; color: #25D366; font-weight: 700; text-decoration: none;
-          border: 1.5px solid #25D366; padding: 7px 12px; border-radius: 20px;
+          border: 1.5px solid #25D366; padding: 7px 12px; border-radius: 20px; background: #fff;
         }
         .cart-btn {
           position: relative; font-size: 12px; color: #111; font-weight: 700;
-          text-decoration: none; border: 1.5px solid #111; padding: 7px 12px; border-radius: 20px;
+          text-decoration: none; border: 1.5px solid #111; padding: 7px 12px; border-radius: 20px; background: #fff;
         }
         .cart-badge {
           position: absolute; top: -6px; right: -6px; background: #111; color: #fff;
           font-size: 10px; border-radius: 50%; width: 17px; height: 17px;
           display: flex; align-items: center; justify-content: center;
         }
-        .hero { position: relative; height: 46vh; min-height: 300px; max-height: 480px; overflow: hidden; }
-        .hero img { width: 100%; height: 100%; object-fit: cover; }
-        .hero-overlay {
+
+        .hero {
+          position: relative;
+          height: 92vh;
+          min-height: 560px;
+          max-height: 860px;
+          margin-top: -68px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hero-gradient {
           position: absolute; inset: 0;
-          background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.55) 100%);
+          background: linear-gradient(90deg, rgba(20,18,15,0.72) 0%, rgba(20,18,15,0.35) 48%, rgba(20,18,15,0.05) 75%);
         }
-        .hero-text { position: absolute; left: 18px; right: 18px; bottom: 22px; color: #fff; }
-        .eyebrow { font-size: 11px; letter-spacing: 1.2px; opacity: 0.9; margin-bottom: 6px; }
-        .headline {
-          font-size: clamp(22px, 6vw, 32px);
-          font-weight: 800; line-height: 1.2; margin-bottom: 14px; max-width: 460px;
-        }
+        .hero-content { position: relative; z-index: 2; padding: 0 20px; max-width: 640px; color: #fff; }
+        .eyebrow { font-size: 11px; letter-spacing: 2px; font-weight: 700; opacity: 0.85; margin-bottom: 14px; }
+        .headline { font-size: clamp(30px, 8vw, 48px); font-weight: 800; line-height: 1.08; margin: 0 0 16px; }
+        .subhead { font-size: 14px; line-height: 1.6; opacity: 0.9; margin: 0 0 26px; max-width: 420px; }
         .shop-btn {
-          display: inline-block; background: #fff; color: #111; font-size: 13px;
-          font-weight: 700; padding: 12px 24px; border-radius: 24px; text-decoration: none;
+          display: inline-flex; align-items: center; gap: 8px;
+          background: #fff; color: #111; font-size: 13px; font-weight: 800;
+          padding: 14px 26px; border-radius: 2px; text-decoration: none; letter-spacing: 0.5px;
         }
-        .subhead { padding: 22px 16px 8px; max-width: 1150px; margin: 0 auto; }
-        .subhead p { font-size: 13px; color: #666; margin: 0; }
+        .arrow { transition: transform 0.2s; }
+        .shop-btn:hover .arrow { transform: translateX(3px); }
+
+        .trust-bar {
+          position: relative; z-index: 2;
+          display: flex; gap: 20px; flex-wrap: wrap;
+          padding: 22px 20px; margin-top: 30px;
+          border-top: 1px solid rgba(255,255,255,0.25);
+        }
+        .trust-item { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 11.5px; font-weight: 600; letter-spacing: 0.3px; }
+        .trust-icon { font-size: 14px; }
+
         .cat-row {
-          max-width: 1150px; margin: 0 auto; padding: 0 16px 16px;
-          display: flex; gap: 8px; overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
+          max-width: 1150px; margin: 0 auto; padding: 26px 16px 16px;
+          display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
         }
         .cat-row::-webkit-scrollbar { display: none; }
         .cat-btn {
@@ -141,14 +191,24 @@ export default function Home() {
           max-width: 1150px; margin: 0 auto; padding: 4px 12px 60px;
           display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 10px;
         }
+
         @media (min-width: 640px) {
           .grid { grid-template-columns: repeat(3, 1fr); gap: 18px 14px; padding: 4px 20px 60px; }
+          .cat-row { padding: 26px 24px 16px; }
         }
-        @media (min-width: 960px) {
-          .grid { grid-template-columns: repeat(4, 1fr); gap: 22px 18px; }
-          .header { padding: 16px 24px; }
-          .subhead { padding: 32px 24px 10px; }
-          .cat-row { padding: 0 24px 18px; }
+        @media (min-width: 900px) {
+          .nav { display: flex; gap: 26px; z-index: 2; }
+          .nav-link {
+            font-size: 12px; font-weight: 700; letter-spacing: 0.6px; color: #fff;
+            text-decoration: none; opacity: 0.9;
+          }
+          .header.scrolled .nav-link { color: #111; }
+          .header { padding: 22px 40px; }
+          .header.scrolled { padding: 14px 40px; }
+          .hero-content { padding: 0 40px; }
+          .trust-bar { padding: 22px 40px; }
+          .grid { grid-template-columns: repeat(4, 1fr); gap: 22px 18px; padding: 4px 40px 70px; }
+          .cat-row { padding: 30px 40px 16px; max-width: 1300px; }
         }
       `}</style>
     </div>
