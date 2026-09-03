@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { discountPct } from "../lib/config";
 
 function Stars({ rating }) {
@@ -12,40 +12,100 @@ function Stars({ rating }) {
 }
 
 export default function ProductCard({ product, onOpen }) {
-  const [hover, setHover] = useState(false);
+  const [activeImg, setActiveImg] = useState(0);
   const pct = discountPct(product.price, product.mrp);
-  const mainImg = product.images[0];
-  const hoverImg = product.images[1] || mainImg;
+  const scrollerRef = useRef(null);
+  const dragStartX = useRef(null);
+  const didDrag = useRef(false);
+
+  const handleScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== activeImg) setActiveImg(idx);
+  };
+
+  const handlePointerDown = (e) => {
+    dragStartX.current = e.clientX ?? (e.touches && e.touches[0].clientX);
+    didDrag.current = false;
+  };
+
+  const handlePointerMove = (e) => {
+    if (dragStartX.current == null) return;
+    const x = e.clientX ?? (e.touches && e.touches[0].clientX);
+    if (Math.abs(x - dragStartX.current) > 8) didDrag.current = true;
+  };
+
+  const handleCardClick = () => {
+    if (didDrag.current) return;
+    onOpen(product);
+  };
 
   return (
-    <div
-      onClick={() => onOpen(product)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{ cursor: "pointer", background: "#fff", position: "relative" }}
-    >
-      {pct > 0 && (
-        <div style={{ position: "absolute", top: 8, left: 8, background: "#111", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 7px", borderRadius: 3, zIndex: 2 }}>
-          {pct}% OFF
+    <div className="card" onClick={handleCardClick}>
+      {pct > 0 && <div className="badge">{pct}% OFF</div>}
+
+      <div className="image-wrap">
+        <div
+          className="scroller"
+          ref={scrollerRef}
+          onScroll={handleScroll}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onTouchStart={handlePointerDown}
+          onTouchMove={handlePointerMove}
+        >
+          {product.images.map((img, idx) => (
+            <div className="slide" key={idx}>
+              <img src={img} alt={product.name} draggable={false} />
+            </div>
+          ))}
         </div>
-      )}
-      <div style={{ aspectRatio: "3/4", overflow: "hidden", background: "#f4f4f4" }}>
-        <img
-          src={hover ? hoverImg : mainImg}
-          alt={product.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
+        {product.images.length > 1 && (
+          <div className="dots">
+            {product.images.map((_, idx) => (
+              <span key={idx} className={idx === activeImg ? "dot active" : "dot"} />
+            ))}
+          </div>
+        )}
       </div>
-      <div style={{ padding: "10px 2px" }}>
-        <div style={{ fontSize: 13.5, color: "#111", fontWeight: 500, marginBottom: 3, lineHeight: 1.3 }}>{product.name}</div>
+
+      <div className="info">
+        <div className="name">{product.name}</div>
         <Stars rating={product.rating || 4.0} />
-        <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 6 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#111" }}>₹{product.price}</span>
-          {product.mrp > product.price && (
-            <span style={{ fontSize: 12, color: "#999", textDecoration: "line-through" }}>₹{product.mrp}</span>
-          )}
+        <div className="price-row">
+          <span className="price">₹{product.price}</span>
+          {product.mrp > product.price && <span className="mrp">₹{product.mrp}</span>}
         </div>
       </div>
+
+      <style jsx>{`
+        .card { cursor: pointer; background: #fff; position: relative; }
+        .badge {
+          position: absolute; top: 8px; left: 8px; background: #111; color: #fff;
+          font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 3px; z-index: 2;
+        }
+        .image-wrap { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: #f4f4f4; }
+        .scroller {
+          display: flex; width: 100%; height: 100%;
+          overflow-x: auto; scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .scroller::-webkit-scrollbar { display: none; }
+        .slide { flex: 0 0 100%; scroll-snap-align: start; height: 100%; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; user-select: none; }
+        .dots {
+          position: absolute; bottom: 8px; left: 0; right: 0;
+          display: flex; justify-content: center; gap: 5px; z-index: 2; pointer-events: none;
+        }
+        .dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.6); }
+        .dot.active { background: #fff; }
+        .info { padding: 10px 2px; }
+        .name { font-size: 13.5px; color: #111; font-weight: 500; margin-bottom: 3px; line-height: 1.3; }
+        .price-row { margin-top: 4px; display: flex; align-items: baseline; gap: 6px; }
+        .price { font-size: 14px; font-weight: 700; color: #111; }
+        .mrp { font-size: 12px; color: #999; text-decoration: line-through; }
+      `}</style>
     </div>
   );
 }

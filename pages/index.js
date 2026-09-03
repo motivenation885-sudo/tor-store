@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
 import { CATEGORIES, WHATSAPP_NUMBER } from "../lib/config";
 import { useCart } from "../lib/cart";
+
+// Add more images here (drop files in /public and list them below).
+// e.g. ["/hero.jpg", "/hero2.jpg", "/hero3.jpg"]
+const HERO_IMAGES = ["/hero.jpg"];
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -10,7 +14,9 @@ export default function Home() {
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [heroIdx, setHeroIdx] = useState(0);
   const { count } = useCart();
+  const heroTimer = useRef(null);
 
   useEffect(() => {
     fetch("/api/products")
@@ -27,6 +33,22 @@ export default function Home() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (HERO_IMAGES.length <= 1) return;
+    heroTimer.current = setInterval(() => {
+      setHeroIdx((i) => (i + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(heroTimer.current);
+  }, []);
+
+  const goToHero = (idx) => {
+    setHeroIdx(idx);
+    clearInterval(heroTimer.current);
+    heroTimer.current = setInterval(() => {
+      setHeroIdx((i) => (i + 1) % HERO_IMAGES.length);
+    }, 5000);
+  };
 
   const filtered = category === "All" ? products : products.filter((p) => p.category === category);
 
@@ -53,7 +75,14 @@ export default function Home() {
       </header>
 
       <div className="hero">
-        <img src="https://opyxazheidtjkylembsw.supabase.co/storage/v1/object/public/product-images/1788177417248-ChatGPTImageAug31202605_25_30PM.png" alt="The Outfit Room" className="hero-img" />
+        {HERO_IMAGES.map((src, idx) => (
+          <img
+            key={src}
+            src={src}
+            alt="The Outfit Room"
+            className={idx === heroIdx ? "hero-img active" : "hero-img"}
+          />
+        ))}
         <div className="hero-gradient" />
         <div className="hero-content">
           <div className="eyebrow">BETTER FITS. EVERYDAY.</div>
@@ -67,6 +96,19 @@ export default function Home() {
             Shop Now <span className="arrow">→</span>
           </a>
         </div>
+
+        {HERO_IMAGES.length > 1 && (
+          <div className="hero-dots">
+            {HERO_IMAGES.map((_, idx) => (
+              <span
+                key={idx}
+                onClick={() => goToHero(idx)}
+                className={idx === heroIdx ? "hero-dot active" : "hero-dot"}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="trust-bar">
           <div className="trust-item">
             <span className="trust-icon">💵</span>
@@ -150,7 +192,11 @@ export default function Home() {
           flex-direction: column;
           justify-content: center;
         }
-        .hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hero-img {
+          position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+          opacity: 0; transition: opacity 0.8s ease;
+        }
+        .hero-img.active { opacity: 1; }
         .hero-gradient {
           position: absolute; inset: 0;
           background: linear-gradient(90deg, rgba(20,18,15,0.72) 0%, rgba(20,18,15,0.35) 48%, rgba(20,18,15,0.05) 75%);
@@ -166,6 +212,15 @@ export default function Home() {
         }
         .arrow { transition: transform 0.2s; }
         .shop-btn:hover .arrow { transform: translateX(3px); }
+
+        .hero-dots {
+          position: absolute; z-index: 2; right: 24px; bottom: 100px;
+          display: flex; flex-direction: column; gap: 8px;
+        }
+        .hero-dot {
+          width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer;
+        }
+        .hero-dot.active { background: #fff; }
 
         .trust-bar {
           position: relative; z-index: 2;
