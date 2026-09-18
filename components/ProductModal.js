@@ -149,10 +149,10 @@ export default function ProductModal({ product, onClose }) {
         .slide {
           flex: 0 0 100%;
           scroll-snap-align: start;
-          aspect-ratio: 4 / 5;
+          aspect-ratio: 1 / 1;
           background: #f4f4f4;
         }
-        .slide img { width: 100%; height: 100%; object-fit: cover; user-select: none; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; object-position: top; user-select: none; }
         .close-btn {
           position: absolute;
           top: 12px;
@@ -197,7 +197,7 @@ export default function ProductModal({ product, onClose }) {
         }
         .dot.active { background: #fff; }
         .thumb-row { display: flex; gap: 8px; padding: 10px 14px; }
-        .thumb { width: 48px; height: 58px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
+        .thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; }
         .thumb.active { border: 2px solid #111; }
         .info-col { padding: 16px 18px 24px; }
         .category { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }

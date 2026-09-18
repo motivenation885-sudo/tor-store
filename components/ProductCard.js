@@ -85,7 +85,7 @@ export default function ProductCard({ product, onOpen }) {
           position: absolute; top: 8px; left: 8px; background: #111; color: #fff;
           font-size: 11px; font-weight: 700; padding: 3px 7px; border-radius: 3px; z-index: 2;
         }
-        .image-wrap { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: #f4f4f4; }
+        .image-wrap { position: relative; aspect-ratio: 1 / 1; overflow: hidden; background: #f4f4f4; }
         .scroller {
           display: flex; width: 100%; height: 100%;
           overflow-x: auto; scroll-snap-type: x mandatory;
@@ -93,7 +93,7 @@ export default function ProductCard({ product, onOpen }) {
         }
         .scroller::-webkit-scrollbar { display: none; }
         .slide { flex: 0 0 100%; scroll-snap-align: start; height: 100%; }
-        .slide img { width: 100%; height: 100%; object-fit: cover; user-select: none; }
+        .slide img { width: 100%; height: 100%; object-fit: cover; object-position: top; user-select: none; }
         .dots {
           position: absolute; bottom: 8px; left: 0; right: 0;
           display: flex; justify-content: center; gap: 5px; z-index: 2; pointer-events: none;
