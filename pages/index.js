@@ -3,6 +3,7 @@ import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
 import { CATEGORIES, WHATSAPP_NUMBER } from "../lib/config";
 import { useCart } from "../lib/cart";
+import ReelsSection from "../components/ReelsSection";
 
 // Add more images here (drop files in /public and list them below).
 // e.g. ["/hero.jpg", "/hero2.jpg", "/hero3.jpg"]
@@ -124,7 +125,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-
+      <ReelsSection />
       <div id="shop" className="cat-row">
         {CATEGORIES.map((c) => (
           <button

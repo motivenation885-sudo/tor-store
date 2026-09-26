@@ -19,22 +19,31 @@ export default function Admin() {
   const [loginErr, setLoginErr] = useState("");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [reels, setReels] = useState([]);
   const [tab, setTab] = useState("products");
   const [form, setForm] = useState(EMPTY_FORM);
-  const [images, setImages] = useState([]); // array of {id, url, uploading}
+  const [images, setImages] = useState([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
-  const [editingId, setEditingId] = useState(null); // null = adding new, else id of product being edited
+  const [editingId, setEditingId] = useState(null);
   const fileInputRef = useRef(null);
   const formRef = useRef(null);
 
+  const [reelVideo, setReelVideo] = useState(null); // { url, uploading }
+  const [reelCaption, setReelCaption] = useState("");
+  const [reelErr, setReelErr] = useState("");
+  const [reelSaving, setReelSaving] = useState(false);
+  const reelFileRef = useRef(null);
+
   const loadProducts = () => fetch("/api/products").then((r) => r.json()).then(setProducts);
   const loadOrders = () => fetch(`/api/orders?password=${encodeURIComponent(pw)}`).then((r) => r.json()).then(setOrders);
+  const loadReels = () => fetch("/api/reels").then((r) => r.json()).then((d) => setReels(Array.isArray(d) ? d : []));
 
   useEffect(() => {
     if (authed) {
       loadProducts();
       loadOrders();
+      loadReels();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
@@ -127,6 +136,63 @@ export default function Admin() {
     loadProducts();
   };
 
+  const handleReelVideoSelected = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setReelErr("");
+    setReelVideo({ url: null, uploading: true });
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const res = await fetch("/api/upload-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw, filename: file.name, dataUrl }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReelVideo({ url: data.url, uploading: false });
+      } else {
+        setReelVideo(null);
+        setReelErr(data.error || "Upload failed");
+      }
+    } catch (err) {
+      setReelVideo(null);
+      setReelErr("Upload failed. Try again.");
+    }
+    e.target.value = "";
+  };
+
+  const addReelSubmit = async () => {
+    if (!reelVideo || !reelVideo.url) {
+      setReelErr("Please upload a video first.");
+      return;
+    }
+    setReelSaving(true);
+    setReelErr("");
+    const res = await fetch("/api/reels", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw, video_url: reelVideo.url, caption: reelCaption }),
+    });
+    if (res.ok) {
+      setReelVideo(null);
+      setReelCaption("");
+      loadReels();
+    } else {
+      setReelErr("Could not save. Try again.");
+    }
+    setReelSaving(false);
+  };
+
+  const deleteReelItem = async (id) => {
+    await fetch("/api/reels", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, password: pw }),
+    });
+    loadReels();
+  };
+
   if (!authed) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#fafafa" }}>
@@ -155,6 +221,9 @@ export default function Admin() {
         </button>
         <button onClick={() => setTab("orders")} style={{ padding: "7px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: tab === "orders" ? "1px solid #111" : "1px solid #ddd", background: tab === "orders" ? "#111" : "#fff", color: tab === "orders" ? "#fff" : "#333" }}>
           Orders ({orders.length})
+        </button>
+        <button onClick={() => setTab("reels")} style={{ padding: "7px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: tab === "reels" ? "1px solid #111" : "1px solid #ddd", background: tab === "reels" ? "#111" : "#fff", color: tab === "reels" ? "#fff" : "#333" }}>
+          Reels ({reels.length})
         </button>
       </div>
 
@@ -247,6 +316,61 @@ export default function Admin() {
                 <div style={{ fontSize: 11, color: "#999" }}>{new Date(o.created_at).toLocaleString()}</div>
               </div>
             ))
+          )}
+        </>
+      )}
+
+      {tab === "reels" && (
+        <>
+          <div style={{ display: "grid", gap: 10, marginBottom: 24, background: "#fafafa", padding: 16, borderRadius: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Add new reel</div>
+
+            {reelVideo && reelVideo.url ? (
+              <div style={{ position: "relative", width: 100 }}>
+                <video src={reelVideo.url} style={{ width: 100, borderRadius: 6, aspectRatio: "9/16", objectFit: "cover", background: "#111" }} muted />
+                <button
+                  onClick={() => setReelVideo(null)}
+                  style={{ position: "absolute", top: -6, right: -6, width: 18, height: 18, borderRadius: "50%", background: "#111", color: "#fff", border: "none", fontSize: 11, cursor: "pointer" }}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => !reelVideo?.uploading && reelFileRef.current?.click()}
+                style={{ width: 100, aspectRatio: "9/16", borderRadius: 6, border: "1px dashed #bbb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: reelVideo?.uploading ? 11 : 24, color: "#999", background: "#fff" }}
+              >
+                {reelVideo?.uploading ? "Uploading..." : "+"}
+              </div>
+            )}
+            <input ref={reelFileRef} type="file" accept="video/*" onChange={handleReelVideoSelected} style={{ display: "none" }} />
+
+            <input placeholder="Caption (optional)" value={reelCaption} onChange={(e) => setReelCaption(e.target.value)} style={inputStyle} />
+
+            {reelErr && <div style={{ color: "#c0392b", fontSize: 12 }}>{reelErr}</div>}
+            <button onClick={addReelSubmit} disabled={reelSaving} style={{ background: "#111", color: "#fff", border: "none", padding: "10px 0", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              {reelSaving ? "Saving..." : "Add Reel"}
+            </button>
+            <div style={{ fontSize: 11, color: "#999" }}>Keep clips short (15-30s) and compressed — large videos load slowly for customers on mobile data.</div>
+          </div>
+
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Current reels ({reels.length})</div>
+          {reels.length === 0 ? (
+            <div style={{ color: "#999", fontSize: 13, padding: 20, textAlign: "center" }}>No reels added yet.</div>
+          ) : (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {reels.map((r) => (
+                <div key={r.id} style={{ position: "relative", width: 90 }}>
+                  <video src={r.video_url} style={{ width: 90, aspectRatio: "9/16", objectFit: "cover", borderRadius: 6, background: "#111" }} muted />
+                  <button
+                    onClick={() => deleteReelItem(r.id)}
+                    style={{ marginTop: 4, width: "100%", border: "none", background: "none", color: "#c0392b", fontSize: 11, cursor: "pointer" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}
