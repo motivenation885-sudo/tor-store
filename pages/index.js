@@ -4,7 +4,7 @@ import ProductModal from "../components/ProductModal";
 import { CATEGORIES, WHATSAPP_NUMBER } from "../lib/config";
 import { useCart } from "../lib/cart";
 import ReelsSection from "../components/ReelsSection";
-
+import Footer from "../components/Footer";
 // Add more images here (drop files in /public and list them below).
 // e.g. ["/hero.jpg", "/hero2.jpg", "/hero3.jpg"]
 const HERO_IMAGES = ["/hero.jpg"];
@@ -267,6 +267,7 @@ export default function Home() {
           .cat-row { padding: 30px 40px 16px; max-width: 1300px; }
         }
       `}</style>
+      <Footer />
     </div>
   );
 }

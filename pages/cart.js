@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useCart } from "../lib/cart";
 import { WHATSAPP_NUMBER } from "../lib/config";
-
+import Footer from "../components/Footer";
 export default function Cart() {
   const { items, updateQty, removeItem, total, clearCart } = useCart();
 
@@ -326,6 +326,7 @@ export default function Cart() {
           Cash on delivery · No payment needed now
         </div>
       </div>
+      <Footer />
     </div>
   );
 }
