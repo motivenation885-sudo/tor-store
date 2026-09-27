@@ -20,6 +20,7 @@ export default function Admin() {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [reels, setReels] = useState([]);
+  const [heroImages, setHeroImages] = useState([]);
   const [tab, setTab] = useState("products");
   const [form, setForm] = useState(EMPTY_FORM);
   const [images, setImages] = useState([]);
@@ -29,21 +30,27 @@ export default function Admin() {
   const fileInputRef = useRef(null);
   const formRef = useRef(null);
 
-  const [reelVideo, setReelVideo] = useState(null); // { url, uploading }
+  const [reelVideo, setReelVideo] = useState(null);
   const [reelCaption, setReelCaption] = useState("");
   const [reelErr, setReelErr] = useState("");
   const [reelSaving, setReelSaving] = useState(false);
   const reelFileRef = useRef(null);
 
+  const [heroUploading, setHeroUploading] = useState(false);
+  const [heroErr, setHeroErr] = useState("");
+  const heroFileRef = useRef(null);
+
   const loadProducts = () => fetch("/api/products").then((r) => r.json()).then(setProducts);
   const loadOrders = () => fetch(`/api/orders?password=${encodeURIComponent(pw)}`).then((r) => r.json()).then(setOrders);
   const loadReels = () => fetch("/api/reels").then((r) => r.json()).then((d) => setReels(Array.isArray(d) ? d : []));
+  const loadHero = () => fetch("/api/hero").then((r) => r.json()).then((d) => setHeroImages(Array.isArray(d) ? d : []));
 
   useEffect(() => {
     if (authed) {
       loadProducts();
       loadOrders();
       loadReels();
+      loadHero();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed]);
@@ -193,6 +200,51 @@ export default function Admin() {
     loadReels();
   };
 
+  const handleHeroFileSelected = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setHeroErr("");
+    setHeroUploading(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const uploadRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw, filename: file.name, dataUrl }),
+      });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        setHeroErr(uploadData.error || "Upload failed");
+        setHeroUploading(false);
+        e.target.value = "";
+        return;
+      }
+      const saveRes = await fetch("/api/hero", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw, image_url: uploadData.url }),
+      });
+      if (saveRes.ok) {
+        loadHero();
+      } else {
+        setHeroErr("Could not save. Try again.");
+      }
+    } catch (err) {
+      setHeroErr("Upload failed. Try again.");
+    }
+    setHeroUploading(false);
+    e.target.value = "";
+  };
+
+  const deleteHeroImage = async (id) => {
+    await fetch("/api/hero", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, password: pw }),
+    });
+    loadHero();
+  };
+
   if (!authed) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#fafafa" }}>
@@ -215,7 +267,7 @@ export default function Admin() {
         <a href="/" style={{ fontSize: 13, color: "#666" }}>← Back to store</a>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
         <button onClick={() => setTab("products")} style={{ padding: "7px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: tab === "products" ? "1px solid #111" : "1px solid #ddd", background: tab === "products" ? "#111" : "#fff", color: tab === "products" ? "#fff" : "#333" }}>
           Products
         </button>
@@ -224,6 +276,9 @@ export default function Admin() {
         </button>
         <button onClick={() => setTab("reels")} style={{ padding: "7px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: tab === "reels" ? "1px solid #111" : "1px solid #ddd", background: tab === "reels" ? "#111" : "#fff", color: tab === "reels" ? "#fff" : "#333" }}>
           Reels ({reels.length})
+        </button>
+        <button onClick={() => setTab("hero")} style={{ padding: "7px 16px", borderRadius: 20, fontSize: 13, cursor: "pointer", border: tab === "hero" ? "1px solid #111" : "1px solid #ddd", background: tab === "hero" ? "#111" : "#fff", color: tab === "hero" ? "#fff" : "#333" }}>
+          Hero Banner ({heroImages.length})
         </button>
       </div>
 
@@ -364,6 +419,42 @@ export default function Admin() {
                   <video src={r.video_url} style={{ width: 90, aspectRatio: "9/16", objectFit: "cover", borderRadius: 6, background: "#111" }} muted />
                   <button
                     onClick={() => deleteReelItem(r.id)}
+                    style={{ marginTop: 4, width: "100%", border: "none", background: "none", color: "#c0392b", fontSize: 11, cursor: "pointer" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "hero" && (
+        <>
+          <div style={{ display: "grid", gap: 10, marginBottom: 24, background: "#fafafa", padding: 16, borderRadius: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Add hero banner image</div>
+            <div
+              onClick={() => !heroUploading && heroFileRef.current?.click()}
+              style={{ width: 140, aspectRatio: "16/9", borderRadius: 6, border: "1px dashed #bbb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: heroUploading ? 11 : 24, color: "#999", background: "#fff" }}
+            >
+              {heroUploading ? "Uploading..." : "+"}
+            </div>
+            <input ref={heroFileRef} type="file" accept="image/*" onChange={handleHeroFileSelected} style={{ display: "none" }} />
+            {heroErr && <div style={{ color: "#c0392b", fontSize: 12 }}>{heroErr}</div>}
+            <div style={{ fontSize: 11, color: "#999" }}>Wide photos (landscape) work best. It's added to the homepage carousel immediately after upload.</div>
+          </div>
+
+          <div style={{ fontSize: 12, color: "#888", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Current hero banners ({heroImages.length})</div>
+          {heroImages.length === 0 ? (
+            <div style={{ color: "#999", fontSize: 13, padding: 20, textAlign: "center" }}>No hero banners added yet — the site is currently using its default banner.</div>
+          ) : (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {heroImages.map((h) => (
+                <div key={h.id} style={{ position: "relative", width: 140 }}>
+                  <img src={h.image_url} style={{ width: 140, aspectRatio: "16/9", objectFit: "cover", borderRadius: 6, border: "1px solid #ddd" }} />
+                  <button
+                    onClick={() => deleteHeroImage(h.id)}
                     style={{ marginTop: 4, width: "100%", border: "none", background: "none", color: "#c0392b", fontSize: 11, cursor: "pointer" }}
                   >
                     Remove
