@@ -5,9 +5,6 @@ import { CATEGORIES, WHATSAPP_NUMBER } from "../lib/config";
 import { useCart } from "../lib/cart";
 import ReelsSection from "../components/ReelsSection";
 import Footer from "../components/Footer";
-// Add more images here (drop files in /public and list them below).
-// e.g. ["/hero.jpg", "/hero2.jpg", "/hero3.jpg"]
-const HERO_IMAGES = ["/hero.jpg"];
 
 export default function Home() {
   const [products, setProducts] = useState([]);
@@ -15,9 +12,11 @@ export default function Home() {
   const [category, setCategory] = useState("All");
   const [selected, setSelected] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [heroImages, setHeroImages] = useState(["/hero.jpg"]);
   const [heroIdx, setHeroIdx] = useState(0);
   const { count } = useCart();
   const heroTimer = useRef(null);
+  const heroScrollerRef = useRef(null);
 
   useEffect(() => {
     fetch("/api/products")
@@ -30,25 +29,55 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/hero")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setHeroImages(data.map((h) => h.image_url));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
-    if (HERO_IMAGES.length <= 1) return;
+    if (heroImages.length <= 1) return;
     heroTimer.current = setInterval(() => {
-      setHeroIdx((i) => (i + 1) % HERO_IMAGES.length);
+      setHeroIdx((i) => {
+        const next = (i + 1) % heroImages.length;
+        const el = heroScrollerRef.current;
+        if (el) el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+        return next;
+      });
     }, 5000);
     return () => clearInterval(heroTimer.current);
-  }, []);
+  }, [heroImages]);
 
   const goToHero = (idx) => {
     setHeroIdx(idx);
+    const el = heroScrollerRef.current;
+    if (el) el.scrollTo({ left: idx * el.clientWidth, behavior: "smooth" });
     clearInterval(heroTimer.current);
     heroTimer.current = setInterval(() => {
-      setHeroIdx((i) => (i + 1) % HERO_IMAGES.length);
+      setHeroIdx((i) => {
+        const next = (i + 1) % heroImages.length;
+        const el2 = heroScrollerRef.current;
+        if (el2) el2.scrollTo({ left: next * el2.clientWidth, behavior: "smooth" });
+        return next;
+      });
     }, 5000);
+  };
+
+  const handleHeroScroll = () => {
+    const el = heroScrollerRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    if (idx !== heroIdx) setHeroIdx(idx);
   };
 
   const filtered = category === "All" ? products : products.filter((p) => p.category === category);
@@ -76,14 +105,13 @@ export default function Home() {
       </header>
 
       <div className="hero">
-        {HERO_IMAGES.map((src, idx) => (
-          <img
-            key={src}
-            src={src}
-            alt="The Outfit Room"
-            className={idx === heroIdx ? "hero-img active" : "hero-img"}
-          />
-        ))}
+        <div className="hero-scroller" ref={heroScrollerRef} onScroll={handleHeroScroll}>
+          {heroImages.map((src, idx) => (
+            <div className="hero-slide" key={src + idx}>
+              <img src={src} alt="The Outfit Room" />
+            </div>
+          ))}
+        </div>
         <div className="hero-gradient" />
         <div className="hero-content">
           <div className="eyebrow">BETTER FITS. EVERYDAY.</div>
@@ -98,9 +126,9 @@ export default function Home() {
           </a>
         </div>
 
-        {HERO_IMAGES.length > 1 && (
+        {heroImages.length > 1 && (
           <div className="hero-dots">
-            {HERO_IMAGES.map((_, idx) => (
+            {heroImages.map((_, idx) => (
               <span
                 key={idx}
                 onClick={() => goToHero(idx)}
@@ -193,16 +221,24 @@ export default function Home() {
           flex-direction: column;
           justify-content: center;
         }
-        .hero-img {
-          position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-          opacity: 0; transition: opacity 0.8s ease;
-        }
-        .hero-img.active { opacity: 1; }
-        .hero-gradient {
+        .hero-scroller {
           position: absolute; inset: 0;
-          background: linear-gradient(90deg, rgba(20,18,15,0.72) 0%, rgba(20,18,15,0.35) 48%, rgba(20,18,15,0.05) 75%);
+          display: flex;
+          overflow-x: auto;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
         }
-        .hero-content { position: relative; z-index: 2; padding: 0 20px; max-width: 640px; color: #fff; }
+        .hero-scroller::-webkit-scrollbar { display: none; }
+        .hero-slide { flex: 0 0 100%; height: 100%; scroll-snap-align: start; }
+        .hero-slide img { width: 100%; height: 100%; object-fit: cover; user-select: none; }
+        .hero-gradient {
+          position: absolute; inset: 0; z-index: 1;
+          background: linear-gradient(90deg, rgba(20,18,15,0.72) 0%, rgba(20,18,15,0.35) 48%, rgba(20,18,15,0.05) 75%);
+          pointer-events: none;
+        }
+        .hero-content { position: relative; z-index: 2; padding: 0 20px; max-width: 640px; color: #fff; pointer-events: none; }
+        .hero-content .shop-btn { pointer-events: auto; }
         .eyebrow { font-size: 11px; letter-spacing: 2px; font-weight: 700; opacity: 0.85; margin-bottom: 14px; }
         .headline { font-size: clamp(30px, 8vw, 48px); font-weight: 800; line-height: 1.08; margin: 0 0 16px; }
         .subhead { font-size: 14px; line-height: 1.6; opacity: 0.9; margin: 0 0 26px; max-width: 420px; }
@@ -216,7 +252,7 @@ export default function Home() {
 
         .hero-dots {
           position: absolute; z-index: 2; right: 24px; bottom: 100px;
-          display: flex; flex-direction: column; gap: 8px;
+          display: flex; flex-direction: column; gap: 8px; pointer-events: auto;
         }
         .hero-dot {
           width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); cursor: pointer;
